@@ -1,0 +1,54 @@
+/* gtkthumbwheel.cpp - GTK2 widget, disabled for GTK3 porting */
+/* This file contains a custom GTK2 widget that requires deep GtkType system changes */
+/* For GTK3, this widget would need to be completely rewritten using GObject */
+
+#include <gtk/gtk.h>
+#include "gtkthumbwheel.h"
+
+/* Stub implementations to allow compilation in GTK3 */
+
+GType gtk_thumbwheel_get_type(void)
+{
+  static GType type = 0;
+  if (!type) {
+    static const GTypeInfo info = {
+      sizeof(GtkThumbWheelClass),
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      sizeof(GtkThumbWheel),
+      0,
+      NULL,
+      NULL
+    };
+    type = g_type_register_static(GTK_TYPE_MISC, "GtkThumbWheel", &info, 0);
+  }
+  return type;
+}
+
+GtkWidget * gtk_thumbwheel_new(void)
+{
+  return GTK_WIDGET(g_object_new(GTK_TYPE_THUMBWHEEL, NULL));
+}
+
+void gtk_thumbwheel_set_value(GtkThumbWheel * thumbwheel, gfloat value)
+{
+  /* TODO: Implement in GTK3 */
+}
+
+gfloat gtk_thumbwheel_get_value(GtkThumbWheel * thumbwheel)
+{
+  return 0.0f;
+}
+
+void gtk_thumbwheel_set_vertical(GtkThumbWheel * thumbwheel, gboolean vertical)
+{
+  if (thumbwheel) thumbwheel->vertical = vertical;
+}
+
+gboolean gtk_thumbwheel_get_vertical(GtkThumbWheel * thumbwheel)
+{
+  return thumbwheel ? thumbwheel->vertical : FALSE;
+}
