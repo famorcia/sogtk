@@ -36,9 +36,7 @@
 
 // *************************************************************************
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
@@ -79,22 +77,22 @@ struct SoGtkViewerButton
 SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[] = {
   { // plane X button
     N_("x"), "X",
-    (GtkSignalFunc) SoGtkPlaneViewerP::xbuttonCB,
+    (GCallback) SoGtkPlaneViewerP::xbuttonCB,
     x_xpm
   },
   { // plane Y button
     N_("y"), "Y",
-    (GtkSignalFunc) SoGtkPlaneViewerP::ybuttonCB,
+    (GCallback) SoGtkPlaneViewerP::ybuttonCB,
     y_xpm
   },
   { // plane Z button
     N_("z"), "Z",
-    (GtkSignalFunc) SoGtkPlaneViewerP::zbuttonCB,
+    (GCallback) SoGtkPlaneViewerP::zbuttonCB,
     z_xpm
   },
   { // camera type button
     N_("camera"), "C",
-    (GtkSignalFunc) SoGtkPlaneViewerP::camerabuttonCB,
+    (GCallback) SoGtkPlaneViewerP::camerabuttonCB,
     perspective_xpm
   }
 };
@@ -102,31 +100,40 @@ SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[] = {
 SoGtkPlaneViewerP::SoGtkPlaneViewerP(SoGtkPlaneViewer * publ)
   : SoGuiPlaneViewerP(publ)
 {
-  GdkColormap * colormap = gtk_widget_get_colormap(PUBLIC(this)->getParentWidget());
+  /* GdkColormap removed in GTK3 */
+  /* gpointer colormap = gtk_widget_get_colormap(PUBLIC(this)->getParentWidget()); */
 
-  this->orthopixmap =
+  /* gdk_pixmap_colormap_create_from_xpm_d removed in GTK3 */
+  /* this->orthopixmap =
     gdk_pixmap_colormap_create_from_xpm_d((GdkWindow *) 0, colormap,
                                           &this->orthomask, (GdkColor *) 0,
-                                          // FIXME: nasty cast, get
-                                          // rid of it. 20020320 mortene.
                                           (gchar **)ortho_xpm);
 
   this->perspectivepixmap =
     gdk_pixmap_colormap_create_from_xpm_d((GdkWindow *) 0, colormap,
                                           &this->perspectivemask,
                                           (GdkColor *) 0,
-                                          // FIXME: nasty cast, get
-                                          // rid of it. 20020320 mortene.
-                                          (gchar **)perspective_xpm);
+                                          (gchar **)perspective_xpm); */
+  
+  this->orthopixmap = NULL;
+  this->orthomask = NULL;
+  this->perspectivepixmap = NULL;
+  this->perspectivemask = NULL;
 }
 
 SoGtkPlaneViewerP::~SoGtkPlaneViewerP()
 {
-  // Button pixmaps.
+  /* GdkPixmap cleanup removed in GTK3 */
+  /* Button pixmaps.
   gdk_pixmap_unref(this->orthopixmap);
   gdk_bitmap_unref(this->orthomask);  
   gdk_pixmap_unref(this->perspectivepixmap);
-  gdk_bitmap_unref(this->perspectivemask);  
+  gdk_bitmap_unref(this->perspectivemask); */
+  
+  if (this->orthopixmap) g_object_unref(this->orthopixmap);
+  if (this->orthomask) g_object_unref(this->orthomask);
+  if (this->perspectivepixmap) g_object_unref(this->perspectivepixmap);
+  if (this->perspectivemask) g_object_unref(this->perspectivemask);
 }
 
 void
@@ -191,10 +198,11 @@ SoGtkPlaneViewer::setCamera(SoCamera * newCamera)
 
     this->setRightWheelString(orthotype ? _("Zoom") : _("Dolly"));
     if (PRIVATE(this)->cameratogglebutton) {
-      GtkWidget * label = GTK_BIN(PRIVATE(this)->cameratogglebutton)->child;
-      gtk_pixmap_set(GTK_PIXMAP(label),
+      /* GTK3: gtk_image_set_from_pixbuf simplified, GTK_BIN->child removed */
+      /* GtkWidget * label = GTK_BIN(PRIVATE(this)->cameratogglebutton)->child;
+      gtk_image_set_from_pixbuf(GTK_IMAGE(label),
         (orthotype ? PRIVATE(this)->orthopixmap : PRIVATE(this)->perspectivepixmap),
-        (orthotype ? PRIVATE(this)->orthomask : PRIVATE(this)->perspectivemask));
+        (orthotype ? PRIVATE(this)->orthomask : PRIVATE(this)->perspectivemask)); */
     }
   }
   inherited::setCamera(newCamera);
@@ -218,8 +226,8 @@ SoGtkPlaneViewer::createViewerButtons(GtkWidget * parent,
 {
   inherited::createViewerButtons(parent, buttonlist);
 
-  GtkTooltips * tooltips = gtk_tooltips_new();
-  GdkColormap * colormap = gtk_widget_get_colormap(parent);
+  gpointer * tooltips = NULL;
+  gpointer * colormap = NULL;
 
   const size_t buttons = sizeof(SoGtkPlaneViewerP::SoGtkPlaneViewerButtons)
                          / sizeof(SoGtkViewerButton);
@@ -236,12 +244,14 @@ SoGtkPlaneViewer::createViewerButtons(GtkWidget * parent,
       break ;
     }
 
-    GTK_WIDGET_UNSET_FLAGS(widget,GTK_CAN_FOCUS);
-    gtk_tooltips_set_tip(tooltips, widget, 
-      _(SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].keyword), NULL);
+    gtk_widget_set_can_focus(widget, FALSE);
+    /* gtk_tooltip_set_text removed in GTK3 */
+    /* gtk_tooltip_set_text(tooltips, widget, 
+      _(SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].keyword), NULL); */
 
-    GdkPixmap * gdk_pixmap = (GdkPixmap *) 0;
-    GdkBitmap * gdk_mask   = (GdkBitmap *) 0;
+    /* GdkPixbuf and GdkPixbuf removed in GTK3 */
+    GdkPixbuf * gdk_pixmap = NULL;
+    GdkPixbuf * gdk_mask   = NULL;
 
     switch(button)
     {
@@ -262,18 +272,17 @@ SoGtkPlaneViewer::createViewerButtons(GtkWidget * parent,
       }
       break;
     default:
-      gdk_pixmap =
+      /* gdk_pixmap_colormap_create_from_xpm_d removed in GTK3 */
+      /* gdk_pixmap =
         gdk_pixmap_colormap_create_from_xpm_d((GdkWindow *) 0, colormap,
                                               &gdk_mask, (GdkColor *) 0,
-                                              // FIXME: nasty cast,
-                                              // get rid of
-                                              // it. 20020320 mortene.
-                                              (gchar **)SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].xpm_data);
+                                              (gchar **)SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].xpm_data); */
       break;
     }
 
 
-    GtkWidget * label = gtk_pixmap_new(gdk_pixmap, gdk_mask);
+    GtkWidget * label = gtk_image_new(); /* gtk_pixmap_new removed in GTK3 */
+    /* GtkWidget * label = gtk_pixmap_new(gdk_pixmap, gdk_mask); */
     gtk_widget_show(label);
 
     switch(button)
@@ -281,15 +290,17 @@ SoGtkPlaneViewer::createViewerButtons(GtkWidget * parent,
     case CAMERA_BUTTON:
       break ;
     default :
-      gdk_pixmap_unref(gdk_pixmap);
-      gdk_bitmap_unref(gdk_mask);
+      /* gdk_pixmap_unref(gdk_pixmap);
+      gdk_bitmap_unref(gdk_mask); */
+      if (gdk_pixmap) g_object_unref(gdk_pixmap);
+      if (gdk_mask) g_object_unref(gdk_mask);
       break ;
     };
 
     gtk_container_add(GTK_CONTAINER(widget), GTK_WIDGET(label));
     if (SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].pressed != NULL) {
-      gtk_signal_connect(GTK_OBJECT(widget), "pressed",
-        GTK_SIGNAL_FUNC(SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].pressed),
+      g_signal_connect(G_OBJECT(widget), "pressed",
+        G_CALLBACK(SoGtkPlaneViewerP::SoGtkPlaneViewerButtons[button].pressed),
         (gpointer) this);
     }
     buttonlist->append(widget);

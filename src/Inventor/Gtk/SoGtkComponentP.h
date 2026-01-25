@@ -48,7 +48,7 @@ public:
   SoGtkComponentP(SoGtkComponent * publ);
   ~SoGtkComponentP();
 
-  static gint realizeHandlerCB(GtkObject * object, gpointer closure);
+  static gint realizeHandlerCB(GObject * object, gpointer closure);
   static GdkCursor * getNativeCursor(GtkWidget * w,
                                      const SoGtkCursor::CustomCursor * cc);
 

@@ -54,8 +54,8 @@ set(SRCS
 
 file(GLOB_RECURSE COMMON_RESOURCES ${CMAKE_BINARY_DIR}/data/materials/*.h)
 include_directories(AFTER ${CMAKE_BINARY_DIR}/data)
-include_directories(${GTK2_INCLUDE_DIRS})
-include_directories(${GTK_GL2_INCLUDE_DIRS})
+include_directories(${GTK3_INCLUDE_DIRS})
+include_directories(${OPENGL_INCLUDE_DIRS})
 
 
 if(HAVE_JOYSTICK_LINUX)
@@ -133,7 +133,7 @@ if(NOT SO${GUI}_BUILD_MAC_FRAMEWORK)
 endif()
 
 
-target_link_libraries(${PROJECT_NAME} Coin::Coin ${GTK2_LIBRARIES} ${GTK_GL2_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} Coin::Coin ${GTK3_LIBRARIES} ${OPENGL_LIBRARIES})
 
 
 # Add a target to generate API documentation with Doxygen

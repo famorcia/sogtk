@@ -49,8 +49,9 @@ public:
   void constructor(const SbBool build);
 
   static struct SoGtkViewerButton SoGtkPlaneViewerButtons[];
-  GdkPixmap * orthopixmap, * perspectivepixmap;
-  GdkBitmap * orthomask, * perspectivemask;
+  /* GdkPixmap and GdkBitmap removed in GTK3 - using GdkPixbuf instead */
+  GdkPixbuf * orthopixmap, * perspectivepixmap;
+  GdkPixbuf * orthomask, * perspectivemask;
 
   GtkWidget * cameratogglebutton;
   static void xbuttonCB(GtkWidget *, gpointer);

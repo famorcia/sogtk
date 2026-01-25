@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <string.h>
 
@@ -110,15 +108,15 @@ GtkWidget *
 SoGtkMaterialList::buildWidget(// protected
   GtkWidget * parent)
 {
-  GtkWidget * listroot = GTK_WIDGET(gtk_vbox_new(FALSE, 0));
+  GtkWidget * listroot = GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
   GtkWidget * menubar = GTK_WIDGET(gtk_menu_bar_new());
-  gtk_widget_set_usize(menubar, 0, 30);
+  gtk_widget_set_size_request(menubar, 0, 30);
   gtk_widget_show(menubar);
   gtk_box_pack_start(GTK_BOX(listroot), GTK_WIDGET(menubar), 0, 0, 0);
   GtkWidget * materials = 
     gtk_menu_item_new_with_label(_("Materials"));
   gtk_widget_show(materials);
-  gtk_menu_bar_append(GTK_MENU_BAR(menubar), materials);
+  gtk_menu_shell_append(GTK_MENU_SHELL(GTK_MENU_BAR(menubar)), materials);
 
   GtkWidget * menu = this->buildPulldownMenu(materials);
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(materials), menu);
@@ -132,18 +130,21 @@ SoGtkMaterialList::buildWidget(// protected
     GTK_SCROLLED_WINDOW(scrolled), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
   gtk_widget_show(scrolled);
 
-  this->listwidget = GTK_WIDGET(gtk_clist_new(1));
+  // GTK3 MIGRATION: GtkCList removed, using GtkListBox instead
+  this->listwidget = gtk_list_box_new();
   gtk_widget_show(this->listwidget);
-  gtk_signal_connect(GTK_OBJECT(this->listwidget), "select_row",
-    GTK_SIGNAL_FUNC(SoGtkMaterialList::itemactivationCB), (gpointer) this);
-  gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled), this->listwidget);
+  g_signal_connect(G_OBJECT(this->listwidget), "row-selected",
+    G_CALLBACK(SoGtkMaterialList::itemactivationCB), (gpointer) this);
+  gtk_container_add(GTK_CONTAINER(scrolled), this->listwidget);
 
   SoGtkMaterialDirectory * dir = common->getMaterialDirectory();
   if (dir && dir->numGroups > 0) {
     SoGtkMaterialGroup * group = dir->groups[dir->current];
     for (int i = 0; i < group->numMaterials; i++) {
-      const char ** ptr = &(group->materials[i]->name);
-      gtk_clist_append(GTK_CLIST(this->listwidget), (char **) ptr);
+      const char * name = group->materials[i]->name;
+      GtkWidget * label = gtk_label_new(name);
+      gtk_list_box_prepend(GTK_LIST_BOX(this->listwidget), label);
+      gtk_widget_show(label);
     }
   }
 
@@ -166,10 +167,10 @@ SoGtkMaterialList::buildPulldownMenu(// protected
   if (data) {
     for (int i = 0; i < data->numGroups; i++) {
       GtkWidget * menuitem = GTK_WIDGET(gtk_menu_item_new_with_label(data->groups[i]->name));
-      gtk_signal_connect(GTK_OBJECT(menuitem), "activate",
-        GTK_SIGNAL_FUNC(SoGtkMaterialList::menuactivationCB), (gpointer) this);
+      g_signal_connect(G_OBJECT(menuitem), "activate",
+        G_CALLBACK(SoGtkMaterialList::menuactivationCB), (gpointer) this);
       gtk_widget_show(menuitem);
-      gtk_menu_append(GTK_MENU(menu), menuitem);
+      gtk_menu_shell_append(GTK_MENU_SHELL(GTK_MENU(menu)), menuitem);
       data->groups[i]->menuitem = menuitem;
     }
   }
@@ -206,10 +207,14 @@ SoGtkMaterialList::menuactivation(// private
     for (int i = 0; i < dir->numGroups; i++) {
       SoGtkMaterialGroup * group = dir->groups[i];
       if (group->menuitem == menuitem) {
-        gtk_clist_clear(GTK_CLIST(this->listwidget));
+        // GTK3 MIGRATION: Clear GtkListBox instead of GtkCList
+        gtk_container_foreach(GTK_CONTAINER(this->listwidget), 
+          (GtkCallback) gtk_widget_destroy, NULL);
         for (int j = 0; j < group->numMaterials; j++) {
-          const char ** ptr = &(group->materials[j]->name);
-          gtk_clist_append(GTK_CLIST(this->listwidget), (char **) ptr);
+          const char * name = group->materials[j]->name;
+          GtkWidget * label = gtk_label_new(name);
+          gtk_list_box_prepend(GTK_LIST_BOX(this->listwidget), label);
+          gtk_widget_show(label);
         }
         dir->current = i;
         return;
@@ -222,7 +227,7 @@ SoGtkMaterialList::menuactivation(// private
 
 void
 SoGtkMaterialList::menuactivationCB(// static, private
-  GtkObject * obj,
+  GObject * obj,
   gpointer closure)
 {
   assert(closure != NULL);
@@ -279,7 +284,7 @@ SoGtkMaterialList::itemactivation(// private
 
 void
 SoGtkMaterialList::itemactivationCB(// static, private
-  GtkObject * obj,
+  GObject * obj,
   gint row,
   gint column,
   GdkEvent * event,

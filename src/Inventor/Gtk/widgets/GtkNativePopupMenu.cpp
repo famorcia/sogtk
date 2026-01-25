@@ -30,16 +30,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include <config.h> // HAVE_CONFIG_H
 
 #include <assert.h>
 #include <string.h>
 
-#include <gtk/gtkmenu.h>
-#include <gtk/gtkcheckmenuitem.h>
-#include <gtk/gtkhseparator.h>
+#include <gtk/gtk.h>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbPList.h>
@@ -322,12 +318,16 @@ GtkNativePopupMenu::_setMenuItemMarked(
     return;
   }
   if (item->item) {
-    gtk_signal_handler_block_by_data(GTK_OBJECT(item->item), (gpointer) item);
+    g_signal_handlers_block_matched(G_OBJECT(item->item), 
+                                     G_SIGNAL_MATCH_DATA, 
+                                     0, 0, NULL, NULL, (gpointer)item);
     if (marked)
       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item->item), TRUE);
     else
       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item->item), FALSE);
-    gtk_signal_handler_unblock_by_data(GTK_OBJECT(item->item), (gpointer) item);
+    g_signal_handlers_unblock_matched(G_OBJECT(item->item), 
+                                       G_SIGNAL_MATCH_DATA, 
+                                       0, 0, NULL, NULL, (gpointer)item);
   }
   if (marked)
     item->flags |= ITEM_MARKED;
@@ -626,8 +626,8 @@ GtkNativePopupMenu::createMenuItem(// private
   item->item = GTK_WIDGET(gtk_check_menu_item_new_with_label(item->title));
   if (item->flags & ITEM_MARKED)
     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item->item), TRUE);
-  gtk_signal_connect(GTK_OBJECT(item->item), "activate",
-    GTK_SIGNAL_FUNC(GtkNativePopupMenu::selectionCB), (gpointer) item);
+  g_signal_connect(G_OBJECT(item->item), "activate",
+    G_CALLBACK(GtkNativePopupMenu::selectionCB), (gpointer) item);
 } // createMenuItem()
 
 // *************************************************************************

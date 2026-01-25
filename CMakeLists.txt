@@ -46,9 +46,12 @@ set(SO${GUI}_VERSION ${SO${GUI}_MAJOR_VERSION}.${SO${GUI}_MINOR_VERSION}.${SO${G
 project(So${Gui} VERSION ${SO${GUI}_MAJOR_VERSION}.${SO${GUI}_MINOR_VERSION}.${SO${GUI}_MICRO_VERSION})
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 
+# Define HAVE_CONFIG_H for all compilation units
+add_compile_definitions(HAVE_CONFIG_H=1)
+
 # ############################################################################
 # these will be removed after upgrading CMake minimum version to 3.9.6
-set(PROJECT_DESCRIPTION   "SoGtk is a GTK2 Gui-toolkit binding for Coin")
+set(PROJECT_DESCRIPTION   "SoGtk is a GTK3 Gui-toolkit binding for Coin")
 # ############################################################################
  
 string(TIMESTAMP SO${GUI}_BUILD_YEAR "%Y")
@@ -128,15 +131,13 @@ report_prepare(
 # Fail early if one of the required packages cannot be found
 
 find_package(OpenGL REQUIRED)
-include(FindGTK2)
-find_package(GTK2 REQUIRED gtk)
 
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules (
-        GTK_GL2   # variable will be used by cmake
+        GTK3   # variable will be used by cmake
         REQUIRED        # is required mandatory
-        gtkgl-2.0  # name of package to be found
+        gtk+-3.0  # name of package to be found
 )
 
 # On Mac OS X, GLX is provided as a separate OpenGL implementation, different

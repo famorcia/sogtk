@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if HAVE_CONFIG_H
 #include "config.h"
-#endif
 
 #include <gtk/gtk.h>
 
@@ -210,25 +208,25 @@ SoGuiP::sensorQueueChanged(void *)
   static guint idleid = 0;
   static guint delayid = 0;
 
-  if (timerid) gtk_timeout_remove(timerid); timerid = 0;
-  if (idleid) gtk_idle_remove(idleid); idleid = 0;
-  if (delayid) gtk_timeout_remove(delayid); delayid = 0;
+  if (timerid) g_source_remove(timerid); timerid = 0;
+  if (idleid) g_source_remove(idleid); idleid = 0;
+  if (delayid) g_source_remove(delayid); delayid = 0;
 
   // Set up timer queue timeout if necessary.
 
   SbTime t;
   if (sm->isTimerSensorPending(t)) {
     SbTime interval = t - SbTime::getTimeOfDay();
-    timerid = gtk_timeout_add(int(interval.getValue() * 1000.0),
-                              (GtkFunction)SoGtk::timerSensorCB, NULL);
+    timerid = g_timeout_add(int(interval.getValue() * 1000.0),
+                            (GSourceFunc)SoGtk::timerSensorCB, NULL);
   }
 
   // Set up idle notification for delay queue processing if necessary.
 
   if (sm->isDelaySensorPending()) {
-    idleid = gtk_idle_add((GtkFunction)SoGtk::idleSensorCB, NULL);
-    delayid = gtk_timeout_add(SoDB::getDelaySensorTimeout().getMsecValue(), 
-			      (GtkFunction)SoGtk::delaySensorCB, NULL);
+    idleid = g_idle_add((GSourceFunc)SoGtk::idleSensorCB, NULL);
+    delayid = g_timeout_add(SoDB::getDelaySensorTimeout().getMsecValue(), 
+			      (GSourceFunc)SoGtk::delaySensorCB, NULL);
   }
 
 }
@@ -305,7 +303,7 @@ SoGtk::getShellWidget(const GtkWidget * widget)
 #endif // SOGTK_DEBUG
 
   GtkWidget * w = gtk_widget_get_toplevel(GTK_WIDGET(widget));
-  return GTK_WIDGET_TOPLEVEL(w) ? w : (GtkWidget *)0;
+  return GTK_WINDOW(w) ? w : (GtkWidget *)0;
 }
 
 // *************************************************************************
@@ -391,7 +389,7 @@ SoGtk::getWidgetSize(const GtkWidget * widget)
     return SbVec2s(0, 0);
   }
 #endif // SOGTK_DEBUG
-  return SbVec2s(widget->allocation.width, widget->allocation.height);
+  return SbVec2s(gtk_widget_get_allocated_width((GtkWidget*)widget), gtk_widget_get_allocated_height((GtkWidget*)widget));
 }
 
 // *************************************************************************
@@ -434,9 +432,9 @@ SoGtk::createSimpleErrorDialog(GtkWidget * widget,
   gtk_window_set_title(GTK_WINDOW(dialog), t.getString());
   gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_MOUSE);
 
-  GtkWidget *action_area = GTK_DIALOG(dialog)->action_area;
+  GtkWidget *action_area = gtk_dialog_get_action_area(GTK_DIALOG(dialog));
 
-  GtkWidget *vbox = GTK_DIALOG(dialog)->vbox ;
+  GtkWidget *vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
   GtkWidget *label = gtk_label_new(errstr.getString());
   gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
@@ -452,9 +450,9 @@ SoGtk::createSimpleErrorDialog(GtkWidget * widget,
   gtk_widget_show(okbutton);
   gtk_box_pack_start(GTK_BOX(action_area), okbutton, FALSE, FALSE, 2);
 
-  gtk_signal_connect_object(GTK_OBJECT(okbutton), "clicked",
-                            GTK_SIGNAL_FUNC(gtk_widget_destroy),
-                            GTK_OBJECT(dialog));
+  g_signal_connect_object(G_OBJECT(okbutton), "clicked",
+                            G_CALLBACK(gtk_widget_destroy),
+                            G_OBJECT(dialog), G_CONNECT_DEFAULT);
 
   gtk_widget_show_all(dialog);
 }

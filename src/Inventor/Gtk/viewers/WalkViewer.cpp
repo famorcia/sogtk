@@ -36,9 +36,7 @@
 
 // ************************************************************************
 
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
+#include <config.h>
 
 #include <Inventor/events/SoEvent.h>
 
@@ -106,7 +104,7 @@ SoGtkWalkViewer::constructor(const SbBool build)
   PRIVATE(this) = new SoGtkWalkViewerP(this);
 
 #if NOTYET
-  GdkColormap *colormap = gtk_widget_get_colormap (this->getParentWidget());
+  gpointer *colormap = gtk_widget_get_colormap (this->getParentWidget());
 
   this->orthopixmap =
       gdk_pixmap_colormap_create_from_xpm_d((GdkWindow *) 0, colormap,
@@ -282,12 +280,12 @@ SoGtkWalkViewer::buildLeftTrim(GtkWidget * parent)
   gtk_widget_show(uleftWheel);
 
 #if NOTYET
-  gtk_signal_connect(GTK_OBJECT(uleftWheel), "attached",
-    GTK_SIGNAL_FUNC(SoGtkFullViewer::leftwheelPressedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(uleftWheel), "value_changed",
-    GTK_SIGNAL_FUNC(SoGtkFullViewer::leftwheelMovedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(uleftWheel), "released",
-    GTK_SIGNAL_FUNC(SoGtkFullViewer::leftwheelReleasedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(uleftWheel), "attached",
+    G_CALLBACK(SoGtkFullViewer::leftwheelPressedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(uleftWheel), "value_changed",
+    G_CALLBACK(SoGtkFullViewer::leftwheelMovedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(uleftWheel), "released",
+    G_CALLBACK(SoGtkFullViewer::leftwheelReleasedCB), (gpointer) this);
 #endif
   GtkWidget *uleftStr = gtk_label_new(_("H"));
   gtk_box_pack_end(GTK_BOX(trim), uleftStr, FALSE, TRUE, FALSE);

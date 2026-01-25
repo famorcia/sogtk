@@ -8,6 +8,11 @@
 
 /* ********************************************************************** */
 
+static void on_window_destroy(GtkWidget *widget, gpointer data)
+{
+  gtk_main_quit();
+}
+
 int
 main(
   int argc,
@@ -19,8 +24,8 @@ main(
   gtk_init( &argc, &argv );
 
   window = gtk_window_new( GTK_WINDOW_TOPLEVEL );
-  gtk_signal_connect( GTK_OBJECT(window), "destroy",
-                      GTK_SIGNAL_FUNC(gtk_exit), NULL );
+  g_signal_connect(G_OBJECT(window), "destroy",
+                   G_CALLBACK(on_window_destroy), NULL);
 
   gtk_container_set_border_width( GTK_CONTAINER(window), 10 );
 

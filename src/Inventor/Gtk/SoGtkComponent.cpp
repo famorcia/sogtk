@@ -36,9 +36,7 @@
 
 // *************************************************************************
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include <config.h> // HAVE_CONFIG_H
 
 #include <stdio.h>
 #include <string.h>
@@ -133,11 +131,11 @@ SoGtkComponent::SoGtkComponent(GtkWidget * const parent,
     PRIVATE(this)->embedded = TRUE;
   }
 
-  gtk_signal_connect(GTK_OBJECT(PRIVATE(this)->parent), "event",
-                     GTK_SIGNAL_FUNC(SoGtkComponent::eventHandler),
+  g_signal_connect(G_OBJECT(PRIVATE(this)->parent), "event",
+                   G_CALLBACK(SoGtkComponent::eventHandler),
                      (gpointer) this);
 
-  gtk_idle_add((GtkFunction) SoGtk::componentCreation, (gpointer) this);
+  g_idle_add((GSourceFunc) SoGtk::componentCreation, (gpointer) this);
 }
 
 /*!
@@ -245,9 +243,17 @@ void
 SoGtkComponent::setBaseWidget(GtkWidget * widget)
 {
   if (PRIVATE(this)->widget) {
-    gtk_signal_disconnect_by_func(GTK_OBJECT(PRIVATE(this)->widget),
-                                  GTK_SIGNAL_FUNC(SoGtkComponentP::realizeHandlerCB),
-                                  (gpointer) this);
+    /* Disconnect signal handler using handler_find */
+    gulong handler_id = g_signal_handler_find(G_OBJECT(PRIVATE(this)->widget), 
+                                             G_SIGNAL_MATCH_FUNC,
+                                             0,
+                                             NULL,
+                                             NULL,
+                                             (gpointer)SoGtkComponentP::realizeHandlerCB,
+                                             NULL);
+    if (handler_id > 0) {
+      g_signal_handler_disconnect(G_OBJECT(PRIVATE(this)->widget), handler_id);
+    }
     this->unregisterWidget(PRIVATE(this)->widget);
   }
 
@@ -267,8 +273,8 @@ SoGtkComponent::setBaseWidget(GtkWidget * widget)
     // so the widget will have a window when the afterRealizeHook()
     // method is invoked. (Which again is necessary for being able to
     // set a cursor on the widget in that callback.)
-    gtk_signal_connect(GTK_OBJECT(PRIVATE(this)->widget), "map",
-                       GTK_SIGNAL_FUNC(SoGtkComponentP::realizeHandlerCB),
+    g_signal_connect(G_OBJECT(PRIVATE(this)->widget), "map",
+                       G_CALLBACK(SoGtkComponentP::realizeHandlerCB),
                        (gpointer) this);
     this->registerWidget(PRIVATE(this)->widget);
   }
@@ -309,7 +315,7 @@ static const char * gdk_event_name(GdkEventType type) {
   case GDK_DROP_FINISHED:     return "GDK_DROP_FINISHED";
   case GDK_CLIENT_EVENT:      return "GDK_CLIENT_EVENT";
   case GDK_VISIBILITY_NOTIFY: return "GDK_VISIBILITY_NOTIFY";
-  case GDK_NO_EXPOSE:         return "GDK_NO_EXPOSE";
+  /* GDK_NO_EXPOSE removed in GTK3 */
   default:
     break;
   }
@@ -341,7 +347,7 @@ SoGtkComponent::eventFilter(GtkWidget * obj, GdkEvent * ev)
     return FALSE;
 
   case GDK_CONFIGURE:
-    if(GTK_WIDGET_REALIZED(this->getBaseWidget())) {
+    if(gtk_widget_get_realized(this->getBaseWidget())) {
       GdkEventConfigure * event = (GdkEventConfigure *) ev;
       SbVec2s size(event->width, event->height);
       PRIVATE(this)->storeSize.setValue(event->width, event->height);
@@ -395,7 +401,7 @@ SoGtkComponent::isVisible(void)
   if (! this->getBaseWidget()) { return FALSE; }
   // FIXME - return true visibility state. 200????? larsa.
   // Close, but probably still incomplete
-  return GTK_WIDGET_DRAWABLE(this->getBaseWidget()) ? TRUE : FALSE;
+  return gtk_widget_is_drawable(this->getBaseWidget()) ? TRUE : FALSE;
 }
 
 /*!
@@ -420,7 +426,7 @@ SoGtkComponent::show(void)
   assert(parent != NULL);
   assert(widget != NULL);
 
-  if (! widget->parent)
+  if (! gtk_widget_get_parent(widget))
     gtk_container_add(GTK_CONTAINER(parent), widget);
 
   if (PRIVATE(this)->storeSize != SbVec2s(-1, -1) && GTK_IS_WINDOW(parent)) {
@@ -430,7 +436,7 @@ SoGtkComponent::show(void)
   }
 
   if (PRIVATE(this)->shelled) {
-    if (! GTK_WIDGET_REALIZED(this->getBaseWidget())) {
+    if (! gtk_widget_get_realized(this->getBaseWidget())) {
       gtk_widget_show(widget);
     }
     gtk_widget_show(parent);
@@ -511,14 +517,14 @@ SoGtkComponent::isTopLevelShell(void) const
   }
 #endif // SOGTK_DEBUG
 
-  if (PRIVATE(this)->widget->parent == 0)
+  if (gtk_widget_get_parent(PRIVATE(this)->widget) == NULL)
   {
     // FIXME: Dunno if this can happen. 200????? larsa.
     SoDebugError::postWarning("SoGtkComponent::isTopLevelShell",
                               "No parent.");
   }
   else {
-    if (PRIVATE(this)->widget->parent == gtk_widget_get_toplevel(PRIVATE(this)->widget)) {
+    if (gtk_widget_get_parent(PRIVATE(this)->widget) == gtk_widget_get_toplevel(PRIVATE(this)->widget)) {
       return TRUE;
     }
     else {
@@ -602,9 +608,9 @@ SoGtkComponent::setIconTitle(const char * const title)
   if (PRIVATE(this)->widget) {
     GtkWidget * window = gtk_widget_get_toplevel(PRIVATE(this)->widget);
     assert(window != NULL);
-    gdk_window_set_icon_name((GTK_WIDGET(PRIVATE(this)->parent))->window,(char*)( title ? title : ""));
+    gdk_window_set_icon_name(gtk_widget_get_window(GTK_WIDGET(PRIVATE(this)->parent)),(char*)( title ? title : ""));
 #if 0
-    gdk_window_set_icon_name(window->window,(char*)( title ? title : ""));
+    gdk_window_set_icon_name(gtk_widget_get_window(window),(char*)( title ? title : ""));
 #endif
   }
 }
@@ -732,8 +738,8 @@ SoGtkComponent::afterRealizeHook(void)
 #if SOGTK_DEBUG && 0
   SoDebugError::postInfo("SoGtkComponent::afterRealizeHook", "[invoked]");
 #endif
-  gtk_signal_connect(GTK_OBJECT(PRIVATE(this)->widget), "event",
-                     GTK_SIGNAL_FUNC(SoGtkComponent::eventHandler),
+  g_signal_connect(G_OBJECT(PRIVATE(this)->widget), "event",
+                     G_CALLBACK(SoGtkComponent::eventHandler),
                      (gpointer) this);
   if (GTK_IS_WINDOW(PRIVATE(this)->parent)) {
     gtk_window_set_title(GTK_WINDOW(PRIVATE(this)->parent), this->getTitle());
@@ -787,20 +793,20 @@ SoGtkComponentP::~SoGtkComponentP()
   event handler for realize events, used for invoking afterRealizeHook()
 */
 gint
-SoGtkComponentP::realizeHandlerCB(GtkObject * object,
+SoGtkComponentP::realizeHandlerCB(GObject * object,
                                   gpointer closure)
 {
   assert(closure != NULL);
   SoGtkComponent * const component = (SoGtkComponent *) closure;
   GtkWidget * widget = component->getBaseWidget();
-  assert(GTK_WIDGET_REALIZED(widget));
+  assert(gtk_widget_get_realized(widget));
   if (PRIVATE(component)->storeSize != SbVec2s(-1, -1)) {
     GtkRequisition req = {
       PRIVATE(component)->storeSize[0],
       PRIVATE(component)->storeSize[1] };
     gtk_widget_size_request(widget, &req);
   }
-  SbVec2s size(widget->allocation.width, widget->allocation.height);
+  SbVec2s size(gtk_widget_get_allocated_width(widget), gtk_widget_get_allocated_height(widget));
   component->sizeChanged(size);
   component->afterRealizeHook();
   return FALSE;
@@ -834,11 +840,11 @@ SoGtkComponent::setFullScreen(const SbBool onoff)
   //   [When do I need to call gtk_widget_realize() vs. gtk_widget_show()?]
   //
   // 20020108 mortene.
-  if (!GTK_WIDGET_REALIZED(GTK_WIDGET(w))) {
+  if (!gtk_widget_get_realized(GTK_WIDGET(w))) {
     gtk_widget_realize(GTK_WIDGET(w));
   }
 
-  GdkWindow * gdk_window = GTK_WIDGET(w)->window;
+  GdkWindow * gdk_window = gtk_widget_get_window(GTK_WIDGET(w));
 
   if (onoff) {
     // Store current window position and geometry for later resetting.
@@ -850,7 +856,7 @@ SoGtkComponent::setFullScreen(const SbBool onoff)
       gdk_window_get_root_origin(gdk_window,
                                  &PRIVATE(this)->nonfull.x,
                                  &PRIVATE(this)->nonfull.y);
-      gdk_window_get_size(gdk_window,
+      gdk_window_get_geometry(gdk_window, NULL, NULL,
                           &PRIVATE(this)->nonfull.w,
                           &PRIVATE(this)->nonfull.h);
     }
@@ -875,7 +881,8 @@ SoGtkComponent::setFullScreen(const SbBool onoff)
     gdk_window_set_decorations(gdk_window, (GdkWMDecoration) 0);
     gdk_window_show(gdk_window);
     gdk_window_move_resize(gdk_window, 0, 0,
-                           gdk_screen_width(), gdk_screen_height());
+                           gdk_screen_get_width(gdk_screen_get_default()), 
+                           gdk_screen_get_height(gdk_screen_get_default()));
   }
   else {
     gdk_window_hide(gdk_window);
@@ -922,23 +929,36 @@ SoGtkComponentP::getNativeCursor(GtkWidget * w,
   SbBool b = SoGtkComponentP::cursordict->find((unsigned long)cc, qc);
   if (b) { return (GdkCursor *)qc; }
 
-  GtkStyle * style = w->style;
-  GdkColor fg = style->black;
-  GdkColor bg = style->white;
-
-  GdkPixmap * bitmap =
-    gdk_bitmap_create_from_data(NULL, (const gchar *)cc->bitmap,
-                                cc->dim[0], cc->dim[1]);
-  GdkPixmap *mask =
-    gdk_bitmap_create_from_data(NULL, (const gchar *)cc->mask,
-                                cc->dim[0], cc->dim[1]);
-
-  // FIXME: plug memleak. 20011126 mortene.
-  GdkCursor * cursor =
-    gdk_cursor_new_from_pixmap(bitmap, mask, &fg, &bg,
-                               cc->hotspot[0], cc->hotspot[1]);
-  gdk_pixmap_unref(bitmap);
-  gdk_pixmap_unref(mask);
+  /* GTK3: GdkPixmap removed, use cairo surface instead */
+  GdkDisplay * display = gtk_widget_get_display(w);
+  GdkCursor * cursor = NULL;
+  
+  /* Create cursor from bitmap data using cairo */
+  cairo_surface_t * bitmap_surface = cairo_image_surface_create(CAIRO_FORMAT_A1, cc->dim[0], cc->dim[1]);
+  cairo_surface_t * mask_surface = cairo_image_surface_create(CAIRO_FORMAT_A1, cc->dim[0], cc->dim[1]);
+  
+  GdkPixbuf * bitmap_pixbuf = gdk_pixbuf_new_from_data((const guchar *)cc->bitmap, 
+                                                         GDK_COLORSPACE_RGB, TRUE, 8,
+                                                         cc->dim[0], cc->dim[1], 
+                                                         cc->dim[0], NULL, NULL);
+  GdkPixbuf * mask_pixbuf = gdk_pixbuf_new_from_data((const guchar *)cc->mask,
+                                                       GDK_COLORSPACE_RGB, TRUE, 8,
+                                                       cc->dim[0], cc->dim[1],
+                                                       cc->dim[0], NULL, NULL);
+  
+  if (bitmap_pixbuf && mask_pixbuf) {
+    cursor = gdk_cursor_new_from_pixbuf(display, bitmap_pixbuf, cc->hotspot[0], cc->hotspot[1]);
+  }
+  
+  if (bitmap_pixbuf) g_object_unref(bitmap_pixbuf);
+  if (mask_pixbuf) g_object_unref(mask_pixbuf);
+  cairo_surface_destroy(bitmap_surface);
+  cairo_surface_destroy(mask_surface);
+  
+  if (cursor == NULL) {
+    /* Fallback to default cursor */
+    cursor = gdk_cursor_new_from_name(display, "default");
+  }
 
   SoGtkComponentP::cursordict->enter((unsigned long)cc, cursor);
   return cursor;
@@ -960,21 +980,8 @@ void
 SoGtkComponent::setWidgetCursor(GtkWidget * w, const SoGtkCursor & cursor)
 {
 
-  if (GTK_WIDGET_NO_WINDOW(w)) {
-    if (SOGTK_DEBUG) {
-      // FIXME: This should not happen, but there seems to be a bug in
-      // SoGtk's event handling causing this. 20001219 RC.
-      static SbBool first = TRUE;
-      if (first) {
-        SoDebugError::postWarning("SoGtkComponent::setWidgetCursor",
-                                  "widget %p: NO WINDOW\n", w);
-        first = FALSE;
-      }
-    }
-    return;
-  }
-
-  if (w->window == (GdkWindow *)NULL) {
+  GdkWindow * gdk_window = gtk_widget_get_window(w);
+  if (gdk_window == NULL) {
     if (SOGTK_DEBUG) {
       // FIXME: This should not happen, but there seems to be a bug in
       // SoGtk's event handling causing this. 20001219 RC.
@@ -990,7 +997,7 @@ SoGtkComponent::setWidgetCursor(GtkWidget * w, const SoGtkCursor & cursor)
 
   if (cursor.getShape() == SoGtkCursor::CUSTOM_BITMAP) {
     const SoGtkCursor::CustomCursor * cc = &cursor.getCustomCursor();
-    gdk_window_set_cursor(w->window, SoGtkComponentP::getNativeCursor(w, cc));
+    gdk_window_set_cursor(gdk_window, SoGtkComponentP::getNativeCursor(w, cc));
   }
   else {
     switch (cursor.getShape()) {
@@ -999,7 +1006,7 @@ SoGtkComponent::setWidgetCursor(GtkWidget * w, const SoGtkCursor & cursor)
         // FIXME: plug memleak with gdk_cursor_destroy(). 20011126 mortene.
         SoGtkComponentP::arrowcursor = gdk_cursor_new(GDK_TOP_LEFT_ARROW);
       }
-      gdk_window_set_cursor(w->window, SoGtkComponentP::arrowcursor);
+      gdk_window_set_cursor(gdk_window, SoGtkComponentP::arrowcursor);
       break;
 
     case SoGtkCursor::BUSY:
@@ -1011,7 +1018,7 @@ SoGtkComponent::setWidgetCursor(GtkWidget * w, const SoGtkCursor & cursor)
         // FIXME: plug memleak. 20011126 mortene.
         SoGtkComponentP::crosscursor = gdk_cursor_new(GDK_CROSSHAIR);
       }
-      gdk_window_set_cursor(w->window, SoGtkComponentP::crosscursor);
+      gdk_window_set_cursor(gdk_window, SoGtkComponentP::crosscursor);
       break;
 
     case SoGtkCursor::UPARROW:
@@ -1019,7 +1026,7 @@ SoGtkComponent::setWidgetCursor(GtkWidget * w, const SoGtkCursor & cursor)
         // FIXME: plug memleak. 20011126 mortene.
         SoGtkComponentP::uparrowcursor = gdk_cursor_new(GDK_SB_UP_ARROW);
       }
-      gdk_window_set_cursor(w->window, SoGtkComponentP::uparrowcursor);
+      gdk_window_set_cursor(gdk_window, SoGtkComponentP::uparrowcursor);
       break;
 
     default:

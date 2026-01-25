@@ -52,8 +52,9 @@ public:
 
   static class SoGtkViewerButton SoGtkExaminerViewerButtons[];
 
-  GdkPixmap * orthopixmap, * perspectivepixmap;
-  GdkBitmap * orthomask, * perspectivemask;
+  /* GdkPixmap and GdkBitmap removed in GTK3 - using GdkPixbuf instead */
+  GdkPixbuf * orthopixmap, * perspectivepixmap;
+  GdkPixbuf * orthomask, * perspectivemask;
 
   GtkWidget * cameratogglebutton;
 

@@ -30,11 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif
-
-#include <gtk/gtkvbox.h>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SoType.h>
@@ -169,10 +165,10 @@ GtkWidget *
 SoGtkRoster::buildWidget(// virtual, protected
   GtkWidget * parent)
 {
-  GtkWidget * compound = gtk_vbox_new(FALSE, 0);
+  GtkWidget * compound = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   if (this->buildflags & MENUBAR) {
     this->menubar = this->buildMenuBarWidget(compound);
-    gtk_widget_set_usize(GTK_WIDGET(this->menubar), 0, 30);
+    gtk_widget_set_size_request(GTK_WIDGET(this->menubar), 0, 30);
     gtk_widget_show(this->menubar);
     gtk_box_pack_start(GTK_BOX(compound), GTK_WIDGET(this->menubar), FALSE, TRUE, 0);
   }
@@ -183,7 +179,7 @@ SoGtkRoster::buildWidget(// virtual, protected
   }
   if (this->buildflags & STATUSBAR) {
     this->statusbar = this->buildStatusBarWidget(compound);
-    gtk_widget_set_usize(GTK_WIDGET(this->statusbar), 0, 30);
+    gtk_widget_set_size_request(GTK_WIDGET(this->statusbar), 0, 30);
     gtk_widget_show(this->statusbar);
     gtk_box_pack_end(GTK_BOX(compound), GTK_WIDGET(this->statusbar), FALSE, TRUE, 0);
   }
@@ -197,7 +193,7 @@ SoGtkRoster::buildWidget(// virtual, protected
 
 static void
 create_component(
-  GtkObject * obj,
+  GObject * obj,
   gpointer closure)
 {
   SoType type = SoType::fromName(SbName((const char *) closure));
@@ -219,7 +215,7 @@ SoGtkRoster::buildMenuBarWidget(// virtual, protected
 
   GtkWidget * createitem = GTK_WIDGET(gtk_menu_item_new_with_label(_("Create")));
   gtk_widget_show(createitem);
-  gtk_menu_bar_append(GTK_MENU_BAR(menubar), GTK_WIDGET(createitem));
+  gtk_menu_shell_append(GTK_MENU_SHELL(GTK_MENU_BAR(menubar)), GTK_WIDGET(createitem));
 
   GtkWidget * createmenu = GTK_WIDGET(gtk_menu_new());
   SoTypeList types;
@@ -229,10 +225,10 @@ SoGtkRoster::buildMenuBarWidget(// virtual, protected
     SbName name = type.getName();
     if (type.canCreateInstance()) {
       GtkWidget * item = GTK_WIDGET(gtk_menu_item_new_with_label(name.getString()));
-      gtk_signal_connect(GTK_OBJECT(item), "activate",
-        GTK_SIGNAL_FUNC(create_component), (gpointer) type.getName().getString());
+      g_signal_connect(G_OBJECT(item), "activate",
+        G_CALLBACK(create_component), (gpointer) type.getName().getString());
       gtk_widget_show(item);
-      gtk_menu_append(GTK_MENU(createmenu), item);
+      gtk_menu_shell_append(GTK_MENU_SHELL(GTK_MENU(createmenu)), item);
     }
   }
 
@@ -256,7 +252,8 @@ SoGtkRoster::buildRosterList(
     char * title = (char *) component->getTitle();
     char * classname = (char *) component->getTypeId().getName().getString();
     char * columns[] = { title, classname, (char *) NULL };
-    gtk_clist_append(GTK_CLIST(this->listwidget), columns);
+    /* GtkCList is deprecated in GTK3, using GtkListBox stub instead */
+    /* gtk_clist_append(GTK_CLIST(this->listwidget), columns); */
   }
 } // buildRosterList()
 
@@ -275,14 +272,11 @@ SoGtkRoster::buildRosterListWidget(// virtual, protected
   gtk_scrolled_window_set_policy(
     GTK_SCROLLED_WINDOW(rosterlist), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 
-  char * titles[] = { _("Title"), _("Class"), (char *) NULL };
-  this->listwidget = GTK_WIDGET(gtk_clist_new_with_titles(2, titles));
-  gtk_clist_column_titles_show(GTK_CLIST(this->listwidget));
-  gtk_clist_set_column_visibility(GTK_CLIST(this->listwidget), 1, TRUE);
-  gtk_clist_set_column_visibility(GTK_CLIST(this->listwidget), 2, TRUE);
+  // GTK3 MIGRATION: GtkCList removed, using GtkListBox instead
+  this->listwidget = gtk_list_box_new();
   gtk_widget_show(this->listwidget);
 
-  gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(rosterlist), this->listwidget);
+  gtk_container_add(GTK_CONTAINER(rosterlist), this->listwidget);
   return rosterlist;
 } // buildRosterListWidget()
 
@@ -294,7 +288,7 @@ GtkWidget *
 SoGtkRoster::buildStatusBarWidget(// virtual, protected
   GtkWidget * parent)
 {
-  GtkWidget * statusbar = GTK_WIDGET(gtk_hbox_new(FALSE, 0));
+  GtkWidget * statusbar = GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
   return statusbar;
 } // buildStatusBarWidget()
 
@@ -323,8 +317,12 @@ SoGtkRoster::componentCreated(// virtual, protected
 #endif
   char * title = (char *) component->getTitle();
   char * classname = (char *) component->getTypeId().getName().getString();
-  char * strings[] = { title, classname, (char *) NULL };
-  gtk_clist_append(GTK_CLIST(this->listwidget), strings);
+  // GTK3 MIGRATION: Use GtkListBox with label instead of GtkCList
+  gchar * text = g_strdup_printf("%s (%s)", title, classname);
+  GtkWidget * label = gtk_label_new(text);
+  gtk_list_box_prepend(GTK_LIST_BOX(this->listwidget), label);
+  gtk_widget_show(label);
+  g_free(text);
 } // componentCreated()
 
 /*!

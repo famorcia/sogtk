@@ -38,7 +38,7 @@
 struct SoGtkViewerButton {
   char * keyword;
   char * label;
-  GtkSignalFunc pressed;
+  GCallback pressed;
   const char ** xpm_data;
 };
 

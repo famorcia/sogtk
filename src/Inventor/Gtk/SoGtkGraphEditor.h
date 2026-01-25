@@ -88,9 +88,9 @@ protected:
 private:
   void constructor(const SbBool build, const int parts);
 
-  static void saveCB(GtkObject * obj, gpointer closure);
-  static void closeCB(GtkObject * obj, gpointer closure);
-  static void selectionCB(GtkObject * obj, gpointer closure);
+  static void saveCB(GObject * obj, gpointer closure);
+  static void closeCB(GObject * obj, gpointer closure);
+  static void selectionCB(GObject * obj, gpointer closure);
 
   GtkWidget * buildSubGraph(GtkWidget * parent, SoNode * node);
 

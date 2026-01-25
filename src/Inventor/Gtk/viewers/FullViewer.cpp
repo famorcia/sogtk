@@ -39,17 +39,11 @@
 // this stops IRIX build from crashing
 // #define NO_THUMBWHEELS
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <string.h>
 
-#include <gtk/gtkvbox.h>
-#include <gtk/gtkhbox.h>
-#include <gtk/gtklabel.h>
-#include <gtk/gtkbutton.h>
-#include <gtk/gtktogglebutton.h>
+#include <gtk/gtk.h>
 
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
@@ -232,32 +226,32 @@ struct SoGtkViewerButton
 SoGtkFullViewerP::SoGtkFullViewerButtons[] = {
   { // interact button
     N_("interact"), "I",
-    (GtkSignalFunc) SoGtkFullViewerP::interactbuttonClickedCB,
+    (GCallback) SoGtkFullViewerP::interactbuttonClickedCB,
     pick_xpm
   },
   { // view
     N_("view"), "E",
-    (GtkSignalFunc) SoGtkFullViewerP::viewbuttonClickedCB,
+    (GCallback) SoGtkFullViewerP::viewbuttonClickedCB,
     view_xpm
   },
   { // home
     N_("home"), "h",
-    (GtkSignalFunc) SoGtkFullViewerP::homebuttonClickedCB,
+    (GCallback) SoGtkFullViewerP::homebuttonClickedCB,
     home_xpm
   },
   { // set home
     N_("set_home"), "H",
-    (GtkSignalFunc) SoGtkFullViewerP::sethomebuttonClickedCB,
+    (GCallback) SoGtkFullViewerP::sethomebuttonClickedCB,
     set_home_xpm
   },
   { // view all
     N_("view_all"), "V",
-    (GtkSignalFunc) SoGtkFullViewerP::viewallbuttonClickedCB,
+    (GCallback) SoGtkFullViewerP::viewallbuttonClickedCB,
     view_all_xpm
   },
   { // seek
     N_("seek"), "S",
-    (GtkSignalFunc) SoGtkFullViewerP::seekbuttonClickedCB,
+    (GCallback) SoGtkFullViewerP::seekbuttonClickedCB,
     seek_xpm
   }
 };
@@ -554,9 +548,9 @@ SoGtkFullViewer::setViewing(SbBool enable)
 GtkWidget *
 SoGtkFullViewer::buildWidget(GtkWidget * parent)
 {
-  GtkWidget * root = gtk_vbox_new(FALSE, 0);
+  GtkWidget * root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   g_return_val_if_fail(root != NULL, (GtkWidget *) NULL);
-  GtkWidget * croot = gtk_hbox_new(FALSE, 0);
+  GtkWidget * croot = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   g_return_val_if_fail(croot != NULL, (GtkWidget *) NULL);
 
   PRIVATE(this)->canvas = inherited::buildWidget(croot);
@@ -619,9 +613,9 @@ SoGtkFullViewer::buildDecoration(GtkWidget * parent)
 GtkWidget *
 SoGtkFullViewer::buildLeftTrim(GtkWidget * parent)
 {
-  GtkWidget * trim = gtk_vbox_new(FALSE, TRUE);
+  GtkWidget * trim = gtk_box_new(GTK_ORIENTATION_VERTICAL, TRUE);
   g_return_val_if_fail(trim != NULL, (GtkWidget *) NULL);
-  gtk_widget_set_usize(GTK_WIDGET(trim), 30, 0);
+  gtk_widget_set_size_request(GTK_WIDGET(trim), 30, 0);
   // set background color
 
 #ifndef NO_THUMBWHEELS
@@ -629,12 +623,12 @@ SoGtkFullViewer::buildLeftTrim(GtkWidget * parent)
   g_return_val_if_fail(this->leftWheel != NULL, (GtkWidget *) NULL);
   gtk_misc_set_padding(GTK_MISC(this->leftWheel), 2, 2);
 
-  gtk_signal_connect(GTK_OBJECT(this->leftWheel), "attached",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::leftwheelPressedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(this->leftWheel), "value_changed",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::leftwheelMovedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(this->leftWheel), "released",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::leftwheelReleasedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->leftWheel), "attached",
+                     G_CALLBACK(SoGtkFullViewerP::leftwheelPressedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->leftWheel), "value_changed",
+                     G_CALLBACK(SoGtkFullViewerP::leftwheelMovedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->leftWheel), "released",
+                     G_CALLBACK(SoGtkFullViewerP::leftwheelReleasedCB), (gpointer) this);
 
   gtk_box_pack_end(GTK_BOX(trim), GTK_WIDGET(this->leftWheel), FALSE, FALSE, TRUE);
   gtk_widget_show(GTK_WIDGET(this->leftWheel));
@@ -653,9 +647,9 @@ SoGtkFullViewer::buildLeftTrim(GtkWidget * parent)
 GtkWidget *
 SoGtkFullViewer::buildBottomTrim(GtkWidget * parent)
 {
-  GtkWidget * trim = gtk_hbox_new(FALSE, TRUE);
+  GtkWidget * trim = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, TRUE);
   g_return_val_if_fail(trim != NULL, (GtkWidget *) NULL);
-  gtk_widget_set_usize(trim, 0, 30);
+  gtk_widget_set_size_request(trim, 0, 30);
 
   this->leftWheelLabel = gtk_label_new(this->leftWheelStr);
   g_return_val_if_fail(this->leftWheelLabel != NULL, (GtkWidget *) NULL);
@@ -674,12 +668,12 @@ SoGtkFullViewer::buildBottomTrim(GtkWidget * parent)
   g_return_val_if_fail(this->bottomWheel != NULL, (GtkWidget *) NULL);
   gtk_misc_set_padding(GTK_MISC(this->bottomWheel), 2, 2);
 
-  gtk_signal_connect(GTK_OBJECT(this->bottomWheel), "attached",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::bottomwheelPressedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(this->bottomWheel), "value_changed",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::bottomwheelMovedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(this->bottomWheel), "released",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::bottomwheelReleasedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->bottomWheel), "attached",
+                     G_CALLBACK(SoGtkFullViewerP::bottomwheelPressedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->bottomWheel), "value_changed",
+                     G_CALLBACK(SoGtkFullViewerP::bottomwheelMovedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->bottomWheel), "released",
+                     G_CALLBACK(SoGtkFullViewerP::bottomwheelReleasedCB), (gpointer) this);
 #endif
 
   gtk_box_pack_start(GTK_BOX(trim), GTK_WIDGET(this->leftWheelLabel), FALSE, TRUE, FALSE);
@@ -708,13 +702,13 @@ SoGtkFullViewer::buildBottomTrim(GtkWidget * parent)
 GtkWidget *
 SoGtkFullViewer::buildRightTrim(GtkWidget * parent)
 {
-  GtkWidget * trim = gtk_vbox_new(FALSE, TRUE);
+  GtkWidget * trim = gtk_box_new(GTK_ORIENTATION_VERTICAL, TRUE);
   g_return_val_if_fail(trim != NULL, (GtkWidget *) NULL);
-  gtk_widget_set_usize(trim, 30, 0);
+  gtk_widget_set_size_request(trim, 30, 0);
 
   GtkWidget * buttons = this->buildViewerButtons(trim);
   g_return_val_if_fail(buttons != NULL, (GtkWidget *) NULL);
-  gtk_widget_set_usize(buttons, 30, 0);
+  gtk_widget_set_size_request(buttons, 30, 0);
   gtk_widget_show(buttons);
 
 #ifndef NO_THUMBWHEELS
@@ -722,12 +716,12 @@ SoGtkFullViewer::buildRightTrim(GtkWidget * parent)
   g_return_val_if_fail(this->rightWheel != NULL, (GtkWidget *) NULL);
   gtk_misc_set_padding(GTK_MISC(this->rightWheel), 2, 2);
 
-  gtk_signal_connect(GTK_OBJECT(this->rightWheel), "attached",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::rightwheelPressedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(this->rightWheel), "value_changed",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::rightwheelMovedCB), (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(this->rightWheel), "released",
-                     GTK_SIGNAL_FUNC(SoGtkFullViewerP::rightwheelReleasedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->rightWheel), "attached",
+                     G_CALLBACK(SoGtkFullViewerP::rightwheelPressedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->rightWheel), "value_changed",
+                     G_CALLBACK(SoGtkFullViewerP::rightwheelMovedCB), (gpointer) this);
+  g_signal_connect(G_OBJECT(this->rightWheel), "released",
+                     G_CALLBACK(SoGtkFullViewerP::rightwheelReleasedCB), (gpointer) this);
 #endif
 
   gtk_box_pack_start(GTK_BOX(trim), GTK_WIDGET(buttons), FALSE, TRUE, TRUE);
@@ -769,14 +763,14 @@ SoGtkFullViewer::buildAppButtons(GtkWidget * parent)
 GtkWidget *
 SoGtkFullViewer::buildViewerButtons(GtkWidget * parent)
 {
-  GtkWidget * buttons = gtk_vbox_new(FALSE, FALSE);
+  GtkWidget * buttons = gtk_box_new(GTK_ORIENTATION_VERTICAL, FALSE);
 
   this->createViewerButtons(buttons, PRIVATE(this)->viewerButtons);
 
   const int num = PRIVATE(this)->viewerButtons->getLength();
   for (int i = 0; i < num; i++) {
     GtkWidget * widget = (GtkWidget *) (*PRIVATE(this)->viewerButtons)[i];
-    gtk_widget_set_usize(widget, 30, 30);
+    gtk_widget_set_size_request(widget, 30, 30);
     gtk_box_pack_start(GTK_BOX(buttons), widget, TRUE, FALSE, FALSE);
     gtk_widget_show(widget);
   }
@@ -791,10 +785,15 @@ void
 SoGtkFullViewer::createViewerButtons(GtkWidget * parent,
                                      SbPList * buttonlist)
 {
-  GtkTooltips *tooltips = gtk_tooltips_new ();
+  /* GtkTooltips removed in GTK3 */
+  gpointer tooltips = NULL;
+  /* GtkTooltips *tooltips = gtk_tooltips_new (); */
 
-  GdkColormap *colormap = gtk_widget_get_colormap (parent);
-  GdkBitmap *mask ;
+  /* GdkColormap removed in GTK3 */
+  gpointer colormap = NULL;
+  /* GdkColormap *colormap = gtk_widget_get_colormap (parent); */
+  gpointer mask = NULL;
+  /* GdkBitmap *mask ; */
 
   GSList *viewing_group = NULL ;
   const size_t buttons = sizeof(SoGtkFullViewerP::SoGtkFullViewerButtons) / sizeof(SoGtkViewerButton);
@@ -804,14 +803,14 @@ SoGtkFullViewer::createViewerButtons(GtkWidget * parent,
     case INTERACT_BUTTON:
       PRIVATE(this)->interactbutton = widget = gtk_radio_button_new(viewing_group);
       gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(widget),FALSE);
-      viewing_group = gtk_radio_button_group(GTK_RADIO_BUTTON(widget));
+      viewing_group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(widget));
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),
                                    this->isViewing() ? FALSE : TRUE);
       break ;
     case EXAMINE_BUTTON:
       PRIVATE(this)->viewbutton = widget = gtk_radio_button_new(viewing_group);
       gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(widget),FALSE);
-      viewing_group = gtk_radio_button_group(GTK_RADIO_BUTTON(widget));
+      viewing_group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(widget));
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),
                                    this->isViewing() ? TRUE : FALSE);
       break ;
@@ -824,27 +823,36 @@ SoGtkFullViewer::createViewerButtons(GtkWidget * parent,
       break ;
     }
 
-    GTK_WIDGET_UNSET_FLAGS (widget, GTK_CAN_FOCUS);
-    gtk_tooltips_set_tip (tooltips, widget,
-                          _(SoGtkFullViewerP::SoGtkFullViewerButtons[button].keyword),
-                          (const gchar *) NULL);
+    gtk_widget_set_can_focus(widget, FALSE);
+    /* gtk_tooltip_set_text removed in GTK3 - tooltips handled differently */
+    /* if (tooltips) {
+      gtk_tooltip_set_text (tooltips, widget,
+                            _(SoGtkFullViewerP::SoGtkFullViewerButtons[button].keyword),
+                            (const gchar *) NULL);
+    } */
 
-    GdkPixmap * gdk_pixmap =
+    /* GdkPixmap and gdk_pixmap_colormap_create_from_xpm_d removed in GTK3 */
+    GdkPixbuf * gdk_pixmap = NULL;
+    GdkPixbuf * mask = NULL;
+    /* 
+    gdk_pixmap =
       gdk_pixmap_colormap_create_from_xpm_d((GdkWindow *) NULL, colormap,
                                             &mask, (GdkColor *) NULL,
-                                            // FIXME: nasty cast, get
-                                            // rid of it. 20020320 mortene.
                                             (gchar **)SoGtkFullViewerP::SoGtkFullViewerButtons[button].xpm_data);
-    GtkWidget * label = gtk_pixmap_new(gdk_pixmap, mask);
+    */
+    GtkWidget * label = gtk_image_new(); /* placeholder */
+    /* GtkWidget * label = gtk_pixmap_new(gdk_pixmap, mask); */
     gtk_widget_show(label);
 
-    gdk_pixmap_unref (gdk_pixmap);
-    gdk_bitmap_unref (mask);
+    /* gdk_pixmap_unref (gdk_pixmap); */
+    /* gdk_bitmap_unref (mask); */
+    if (gdk_pixmap) g_object_unref(gdk_pixmap);
+    if (mask) g_object_unref(mask);
 
     gtk_container_add(GTK_CONTAINER(widget), GTK_WIDGET(label));
     if ((void *) SoGtkFullViewerP::SoGtkFullViewerButtons[button].pressed != NULL) {
-      gtk_signal_connect(GTK_OBJECT(widget), "pressed",
-                         GTK_SIGNAL_FUNC(SoGtkFullViewerP::SoGtkFullViewerButtons[button].pressed),
+      g_signal_connect(G_OBJECT(widget), "pressed",
+                         G_CALLBACK(SoGtkFullViewerP::SoGtkFullViewerButtons[button].pressed),
                          (gpointer) this);
     }
     buttonlist->append(widget);
@@ -964,9 +972,13 @@ SoGtkFullViewerP::interactbuttonClicked(void)
 {
   if (!PUBLIC(this)->isViewing()) {
     GtkWidget * button = this->interactbutton ;
-    gtk_signal_handler_block_by_data(GTK_OBJECT(button), (gpointer) this);
+    /* g_signal_handlers_block_by_func requires specific callback address */
+    gulong handler_id = g_signal_handler_find(G_OBJECT(button),
+                                             G_SIGNAL_MATCH_CLOSURE,
+                                             0, NULL, NULL, NULL, NULL);
+    if (handler_id > 0) g_signal_handler_block(G_OBJECT(button), handler_id);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
-    gtk_signal_handler_unblock_by_data(GTK_OBJECT(button), (gpointer) this);
+    if (handler_id > 0) g_signal_handler_unblock(G_OBJECT(button), handler_id);
     return;
   }
   PUBLIC(this)->setViewing(FALSE);
@@ -977,9 +989,13 @@ SoGtkFullViewerP::viewbuttonClicked(void)
 {
   if (PUBLIC(this)->isViewing()) {
     GtkWidget * button = this->viewbutton;
-    gtk_signal_handler_block_by_data(GTK_OBJECT(button), (gpointer) this);
+    /* g_signal_handlers_block_by_func requires specific callback address */
+    gulong handler_id = g_signal_handler_find(G_OBJECT(button),
+                                             G_SIGNAL_MATCH_CLOSURE,
+                                             0, NULL, NULL, NULL, NULL);
+    if (handler_id > 0) g_signal_handler_block(G_OBJECT(button), handler_id);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
-    gtk_signal_handler_unblock_by_data(GTK_OBJECT(button), (gpointer) this);
+    if (handler_id > 0) g_signal_handler_unblock(G_OBJECT(button), handler_id);
     return;
   }
   PUBLIC(this)->setViewing(TRUE);

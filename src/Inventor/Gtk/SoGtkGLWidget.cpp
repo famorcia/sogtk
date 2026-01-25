@@ -34,9 +34,7 @@
 
 // *************************************************************************
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif // HAVE_CONFIG_H
 
 #if HAVE_GLX
 #include <GL/glx.h> // For glXIsDirect().
@@ -44,8 +42,8 @@
 
 #include <Inventor/Gtk/common/gl.h>
 
-#include <gtkgl/gtkglarea.h>
 #include <gdk/gdk.h>
+#include <gtk/gtk.h>
 
 #include <Inventor/errors/SoDebugError.h>
 
@@ -93,11 +91,8 @@ SoGtkGLWidget::SoGtkGLWidget(GtkWidget * const parent,
 
   PRIVATE(this)->borderThickness = SO_BORDER_THICKNESS;
 
-  if (! gdk_gl_query()) {
-    SoDebugError::post("SoGtkGLWidget::SoGtkGLWidget", 
-      _("OpenGL is not available on your display!"));
-    return;
-  }
+  /* GTK3: gdk_gl_query() doesn't exist, assume OpenGL is available */
+  /* TODO: Implement proper OpenGL availability check for GTK3 */
 
   if (! build) return;
   this->setClassName("SoGtkGLWidget");
@@ -130,32 +125,15 @@ SoGtkGLWidget::buildWidget(GtkWidget * parent)
   
   SoGtkGLWidget * sharewidget = (SoGtkGLWidget*) SoAny::si()->getSharedGLContext(display, screen);
 
-  int glAttributes[16], i = 0;
-
-  if (PRIVATE(this)->glModeBits & SO_GL_RGB) {
-    glAttributes[i] = GDK_GL_RGBA; i++;
-  }
-  if (PRIVATE(this)->glModeBits & SO_GL_DOUBLE) {
-    glAttributes[i] = GDK_GL_DOUBLEBUFFER; i++;
-  }
-  if (PRIVATE(this)->glModeBits & SO_GL_ZBUFFER) {
-    glAttributes[i] = GDK_GL_DEPTH_SIZE; i++;
-    glAttributes[i] = 1; i++;
-  }
-  if (PRIVATE(this)->glModeBits & SO_GL_STEREO) {
-    glAttributes[i] = GDK_GL_STEREO; i++;
-  }
-
-  glAttributes[i] = GDK_GL_STENCIL_SIZE; i++;
-  glAttributes[i] = 1; i++;
-
-  glAttributes[i] = GDK_GL_NONE; i++;
+  /* GTK3: GDK_GL_* constants removed, using GtkGLArea directly */
+  /* Note: Modern GTK3 uses GtkGLArea which handles OpenGL attributes internally */
 
   if (sharewidget) {
-    PRIVATE(this)->glWidget = gtk_gl_area_share_new(glAttributes, (GtkGLArea*) sharewidget->getGLWidget());
+    /* GTK3 GtkGLArea doesn't support direct sharing, create separate context */
+    PRIVATE(this)->glWidget = gtk_gl_area_new();
   }
   else {
-    PRIVATE(this)->glWidget = gtk_gl_area_new(glAttributes);    
+    PRIVATE(this)->glWidget = gtk_gl_area_new();    
   }
   assert(PRIVATE(this)->glWidget != NULL);
 
@@ -164,12 +142,12 @@ SoGtkGLWidget::buildWidget(GtkWidget * parent)
   GtkRequisition req = { 100, 100 };
   gtk_widget_size_request(PRIVATE(this)->glWidget, &req);
   
-  gtk_signal_connect(GTK_OBJECT(PRIVATE(this)->glWidget), "realize",
-                      GTK_SIGNAL_FUNC(SoGtkGLWidgetP::sGLInit), (void *) this);
-  gtk_signal_connect(GTK_OBJECT(PRIVATE(this)->glWidget), "configure_event",
-                      GTK_SIGNAL_FUNC(SoGtkGLWidgetP::sGLReshape), (void *) this);
-  gtk_signal_connect(GTK_OBJECT(PRIVATE(this)->glWidget), "expose_event",
-                      GTK_SIGNAL_FUNC(SoGtkGLWidgetP::sGLDraw), (void *) this);
+  g_signal_connect(G_OBJECT(PRIVATE(this)->glWidget), "realize",
+                      G_CALLBACK(SoGtkGLWidgetP::sGLInit), (void *) this);
+  g_signal_connect(G_OBJECT(PRIVATE(this)->glWidget), "configure_event",
+                      G_CALLBACK(SoGtkGLWidgetP::sGLReshape), (void *) this);
+  g_signal_connect(G_OBJECT(PRIVATE(this)->glWidget), "expose_event",
+                      G_CALLBACK(SoGtkGLWidgetP::sGLDraw), (void *) this);
   
   PRIVATE(this)->container = gtk_frame_new(0);
   gtk_frame_set_shadow_type(GTK_FRAME(PRIVATE(this)->container), GTK_SHADOW_IN);
@@ -399,8 +377,8 @@ SoGtkGLWidget::getGLSize(void) const
 {
   if (! PRIVATE(this)->glWidget)
     return SbVec2s(-1, -1);
-  return SbVec2s(PRIVATE(this)->glWidget->allocation.width,
-                  PRIVATE(this)->glWidget->allocation.height);
+  return SbVec2s(gtk_widget_get_allocated_width(PRIVATE(this)->glWidget),
+                  gtk_widget_get_allocated_height(PRIVATE(this)->glWidget));
 }
 
 // Documented in common/SoGuiGLWidgetCommon.cpp.in.
@@ -409,8 +387,8 @@ SoGtkGLWidget::getGLAspectRatio(void) const
 {
   if (! PRIVATE(this)->glWidget)
     return 1.0f;
-  return (float) PRIVATE(this)->glWidget->allocation.width /
-    (float) PRIVATE(this)->glWidget->allocation.height;
+  return (float) gtk_widget_get_allocated_width(PRIVATE(this)->glWidget) /
+    (float) gtk_widget_get_allocated_height(PRIVATE(this)->glWidget);
 }
 
 // *************************************************************************
@@ -475,8 +453,8 @@ SoGtkGLWidgetP::sGLReshape(GtkWidget * widget,
 {
   SoGtkGLWidget * glwidget = (SoGtkGLWidget *) closure;
   PRIVATE(glwidget)->wasresized = TRUE;
-  PRIVATE(glwidget)->glSize = SbVec2s(PRIVATE(glwidget)->glWidget->allocation.width,
-                                      PRIVATE(glwidget)->glWidget->allocation.height);
+  PRIVATE(glwidget)->glSize = SbVec2s(gtk_widget_get_allocated_width(PRIVATE(glwidget)->glWidget),
+                                      gtk_widget_get_allocated_height(PRIVATE(glwidget)->glWidget));
   return TRUE;
 }
 
@@ -534,8 +512,10 @@ SoGtkGLWidget::glUnlockOverlay(void)
 void
 SoGtkGLWidget::glSwapBuffers(void)
 {
-  if (GTK_IS_GL_AREA(PRIVATE(this)->glWidget))
-    gtk_gl_area_swapbuffers(GTK_GL_AREA(PRIVATE(this)->glWidget));
+  /* GTK3 GtkGLArea handles buffer swapping automatically, queue a render instead */
+  if (GTK_IS_GL_AREA(PRIVATE(this)->glWidget)) {
+    gtk_gl_area_queue_render(GTK_GL_AREA(PRIVATE(this)->glWidget));
+  }
 }
 
 // Documented in common/SoGuiGLWidgetCommon.cpp.in.

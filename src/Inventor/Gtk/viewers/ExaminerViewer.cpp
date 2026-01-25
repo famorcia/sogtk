@@ -34,9 +34,7 @@
 
 // *************************************************************************
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
@@ -76,7 +74,7 @@ struct SoGtkViewerButton
 SoGtkExaminerViewerP::SoGtkExaminerViewerButtons[] = {
   { // camera type button
     N_("camera"), "C",   
-    (GtkSignalFunc) SoGtkExaminerViewerP::camerabuttonCB,
+    (GCallback) SoGtkExaminerViewerP::camerabuttonCB,
     perspective_xpm
   }
 };
@@ -170,10 +168,11 @@ SoGtkExaminerViewer::setCamera(SoCamera * newCamera)
 
     this->setRightWheelString(orthotype ? _("Zoom") : _("Dolly"));
     if (PRIVATE(this)->cameratogglebutton) {
-      GtkWidget * label = GTK_BIN(PRIVATE(this)->cameratogglebutton)->child;
+      /* GTK3: gtk_pixmap_set, GdkPixmap removed */
+      /* GtkWidget * label = GTK_BIN(PRIVATE(this)->cameratogglebutton)->child;
       gtk_pixmap_set(GTK_PIXMAP(label),
         (orthotype ? PRIVATE(this)->orthopixmap : PRIVATE(this)->perspectivepixmap),
-        (orthotype ? PRIVATE(this)->orthomask : PRIVATE(this)->perspectivemask));
+        (orthotype ? PRIVATE(this)->orthomask : PRIVATE(this)->perspectivemask)); */
     }
   }
   inherited::setCamera(newCamera);
@@ -189,8 +188,10 @@ SoGtkExaminerViewer::createViewerButtons(GtkWidget * parent,
 {
   inherited::createViewerButtons(parent, buttonlist);
   
-  GtkTooltips * tooltips = gtk_tooltips_new();
-  GdkColormap * colormap = gtk_widget_get_colormap(parent);
+  /* GtkTooltips deprecated in GTK3 */
+  /* GtkTooltips * tooltips = gtk_tooltips_new(); */
+  /* GdkColormap removed in GTK3 */
+  /* GdkColormap * colormap = gtk_widget_get_colormap(parent); */
 
   const size_t buttons = sizeof(SoGtkExaminerViewerP::SoGtkExaminerViewerButtons)
     / sizeof(SoGtkViewerButton);
@@ -206,12 +207,17 @@ SoGtkExaminerViewer::createViewerButtons(GtkWidget * parent,
         break;
       }
 
-    GTK_WIDGET_UNSET_FLAGS (widget, GTK_CAN_FOCUS);
+    /* gtk_tooltips_set_tip removed in GTK3 */
+    /* GTK_WIDGET_UNSET_FLAGS (widget, GTK_CAN_FOCUS);
     gtk_tooltips_set_tip(tooltips, widget, 
-                         _(SoGtkExaminerViewerP::SoGtkExaminerViewerButtons[button].keyword), NULL);
+                         _(SoGtkExaminerViewerP::SoGtkExaminerViewerButtons[button].keyword), NULL); */
+    if (widget) {
+      gtk_widget_set_can_focus(widget, FALSE);
+    }
 
-    GdkPixmap * gdk_pixmap = (GdkPixmap *) 0;
-    GdkBitmap * gdk_mask   = (GdkBitmap *) 0;
+    /* GdkPixmap and GdkBitmap removed in GTK3 */
+    GdkPixbuf * gdk_pixmap = (GdkPixbuf *) 0;
+    GdkPixbuf * gdk_mask   = (GdkPixbuf *) 0;
 
     switch(button)
       {
@@ -236,13 +242,15 @@ SoGtkExaminerViewer::createViewerButtons(GtkWidget * parent,
         break;
       }
 
-    GtkWidget * label = gtk_pixmap_new(gdk_pixmap, gdk_mask);
+    /* gtk_pixmap_new removed in GTK3 */
+    GtkWidget * label = gtk_image_new(); /* placeholder */
+    /* GtkWidget * label = gtk_pixmap_new(gdk_pixmap, gdk_mask); */
     gtk_widget_show(label);
 
     gtk_container_add(GTK_CONTAINER(widget), GTK_WIDGET(label));
     if (SoGtkExaminerViewerP::SoGtkExaminerViewerButtons[button].pressed != NULL) {
-      gtk_signal_connect(GTK_OBJECT(widget), "pressed",
-                         GTK_SIGNAL_FUNC(SoGtkExaminerViewerP::SoGtkExaminerViewerButtons[button].pressed),
+      g_signal_connect(G_OBJECT(widget), "pressed",
+                         G_CALLBACK(SoGtkExaminerViewerP::SoGtkExaminerViewerButtons[button].pressed),
                          (gpointer) this);
     }
     buttonlist->append(widget);
@@ -257,7 +265,8 @@ SoGtkExaminerViewer::createViewerButtons(GtkWidget * parent,
 SoGtkExaminerViewerP::SoGtkExaminerViewerP(SoGtkExaminerViewer * publ)
   : SoGuiExaminerViewerP(publ)
 {
-  GdkColormap * colormap = gtk_widget_get_colormap (PUBLIC(this)->getParentWidget());
+  /* GdkPixmap and gdk_pixmap_colormap_create_from_xpm_d removed in GTK3 */
+  /* GdkColormap * colormap = gtk_widget_get_colormap (PUBLIC(this)->getParentWidget());
 
   this->orthopixmap =
       gdk_pixmap_colormap_create_from_xpm_d((GdkWindow *) 0, colormap,
@@ -272,17 +281,28 @@ SoGtkExaminerViewerP::SoGtkExaminerViewerP(SoGtkExaminerViewer * publ)
                                           (GdkColor *) 0,
                                           // FIXME: nasty cast, get
                                           // rid of it. 20020320 mortene.
-                                          (gchar **)perspective_xpm);
+                                          (gchar **)perspective_xpm); */
+  
+  this->orthopixmap = NULL;
+  this->orthomask = NULL;
+  this->perspectivepixmap = NULL;
+  this->perspectivemask = NULL;
 }
 
 SoGtkExaminerViewerP::~SoGtkExaminerViewerP()
 {
-  // Button pixmaps.
+  /* GdkPixmap cleanup removed in GTK3 */
+  /* Button pixmaps.
   gdk_pixmap_unref(this->orthopixmap);
   gdk_bitmap_unref(this->orthomask);
 
   gdk_pixmap_unref(this->perspectivepixmap);
-  gdk_bitmap_unref(this->perspectivemask);
+  gdk_bitmap_unref(this->perspectivemask); */
+  
+  if (this->orthopixmap) g_object_unref(this->orthopixmap);
+  if (this->orthomask) g_object_unref(this->orthomask);
+  if (this->perspectivepixmap) g_object_unref(this->perspectivepixmap);
+  if (this->perspectivemask) g_object_unref(this->perspectivemask);
 
 }
 

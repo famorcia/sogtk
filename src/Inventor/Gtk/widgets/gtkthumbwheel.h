@@ -33,10 +33,7 @@
 #ifndef SOGTK_THUMBWHEEL_H
 #define SOGTK_THUMBWHEEL_H
 
-#include <gdk/gdk.h>
-/* #include <gtk/gtkadjustment.h> */
-#include <gtk/gtkwidget.h>
-#include <gtk/gtkmisc.h>
+#include <gtk/gtk.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,16 +45,16 @@ extern "C" {
   (gtk_thumbwheel_get_type())
 
 #define GTK_THUMBWHEEL(obj) \
-  (GTK_CHECK_CAST((obj), GTK_TYPE_THUMBWHEEL, GtkThumbWheel))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GTK_TYPE_THUMBWHEEL, GtkThumbWheel))
 
 #define GTK_THUMBWHEEL_CLASS(cclass) \
-  (GTK_CHECK_CLASS_CAST((cclass), GTK_TYPE_THUMBWHEEL, GtkThumbwheelClass))
+  (G_TYPE_CHECK_CLASS_CAST((cclass), GTK_TYPE_THUMBWHEEL, GtkThumbwheelClass))
 
 #define GTK_IS_THUMBWHEEL(obj) \
-  (GTK_CHECK_TYPE((obj), GTK_TYPE_THUMBWHEEL))
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GTK_TYPE_THUMBWHEEL))
 
 #define GTK_IS_THUMBWHEEL_CLASS(cclass) \
-  (GTK_CHECK_CLASS_TYPE((cclass), GTK_TYPE_THUMBWHEEL))
+  (G_TYPE_CHECK_CLASS_TYPE((cclass), GTK_TYPE_THUMBWHEEL))
 
 /* ********************************************************************** */
 
@@ -105,9 +102,9 @@ struct _GtkThumbWheelClass {
 /* ********************************************************************** */
 
 GtkWidget *  gtk_thumbwheel_new               (gint vertical);
-GtkType      gtk_thumbwheel_get_type          (void);
+GType      gtk_thumbwheel_get_type          (void);
 void         gtk_thumbwheel_set_update_policy (GtkThumbWheel * thumbwheel,
-                                               GtkUpdateType policy);
+                                               guint policy);
 
 void         gtk_thumbwheel_set_value         (GtkThumbWheel * thumbwheel,
                                                gfloat value);

@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <sogtkdefs.h>
 #include <Inventor/Gtk/devices/SoGtkSpaceball.h>
@@ -70,8 +68,8 @@ SoGtkSpaceball::enable(GtkWidget * widget,
                        gpointer closure)
 {
   if (func)
-    gtk_signal_connect(GTK_OBJECT(widget), "event",
-                       GTK_SIGNAL_FUNC(func), closure);
+    g_signal_connect(G_OBJECT(widget), "event",
+                       G_CALLBACK(func), closure);
 }
 
 void
@@ -79,9 +77,19 @@ SoGtkSpaceball::disable(GtkWidget * widget,
                         SoGtkEventHandler * func,
                         gpointer closure)
 {
-  if (func)
-    gtk_signal_disconnect_by_func(GTK_OBJECT(widget),
-                                  GTK_SIGNAL_FUNC(func), closure);
+  if (func) {
+    /* g_signal_handlers_disconnect_by_func requires the exact same callback address */
+    gulong handler_id = g_signal_handler_find(G_OBJECT(widget), 
+                                             G_SIGNAL_MATCH_FUNC,
+                                             0,
+                                             NULL,
+                                             NULL,
+                                             (gpointer)func,
+                                             NULL);
+    if (handler_id > 0) {
+      g_signal_handler_disconnect(G_OBJECT(widget), handler_id);
+    }
+  }
 }
 
 // *************************************************************************

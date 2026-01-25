@@ -17,7 +17,7 @@ include_directories(
         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/src>
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${GTK2_INCLUDE_DIRS}
+        ${GTK3_INCLUDE_DIRS}
 )
 
 add_subdirectory(components)
