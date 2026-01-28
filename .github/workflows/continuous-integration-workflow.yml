@@ -1,0 +1,105 @@
+name: Continuous Integration Build
+
+on:
+  workflow_dispatch:  # Allow manual triggers
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu-build:
+    name: Ubuntu Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Update and install dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install g++ freeglut3-dev git libboost-all-dev
+      - name: Download and install Coin3D
+        run: |
+          git clone --depth 1 --branch v4.0.6 https://github.com/coin3d/coin.git /tmp/coin_source_dir
+          cmake -S /tmp/coin_source_dir -B /tmp/coin_source_dir/coin_build_dir -DCOIN_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=11
+          sudo cmake --build /tmp/coin_source_dir/coin_build_dir --target install --config Release -- -j8
+      - name: Download and install fltk
+        run: |
+          git clone --depth 1 --branch release-1.4.4 https://github.com/fltk/fltk /tmp/fltk_source_dir
+          cmake -S /tmp/fltk_source_dir -B /tmp/fltk_source_dir/fltk_build_dir -DFLTK_BUILD_TEST=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=11 -DFLTK_BUILD_SHARED_LIBS=ON
+          sudo cmake --build /tmp/fltk_source_dir/fltk_build_dir --target install --config Release -- -j8
+      - name: Configure and build project
+        run: |
+          cmake -S . -B cmake_build_dir -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=cmake_install_dir
+          cmake --build cmake_build_dir --target install --config Release -- -j4
+      - name: Run tests
+        run:  ctest -C Release -VV
+        working-directory: cmake_build_dir
+      - name: Create Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ubuntu-Artifacts
+          path: cmake_install_dir/
+        if: always()
+
+#  windows-build:
+#    name: Windows Build
+#    runs-on: windows-latest
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#      - name: Create build directory and run CMake
+#        shell: cmd
+#        run: |
+#          mkdir cmake_download_dir
+#          set DOWNLOAD_FILE_BOOST=boost_1_78_0-bin-msvc-14.3-64.7z
+#          for /f %%i in ('curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/coin3d/coin/releases ^| jq -r --arg COIN_REPO_TAG_NAME "CI-builds" ".[] | select(.tag_name==$COIN_REPO_TAG_NAME) | .id"') do set RELEASE_ID=%%i
+#          for /f %%i in ('curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/coin3d/coin/releases/%RELEASE_ID% ^| jq -r --arg DOWNLOAD_FILE_BOOST "%DOWNLOAD_FILE_BOOST%" ".assets[] | select(.name==$DOWNLOAD_FILE_BOOST) | .id"') do set ASSET_ID=%%i
+#          set DOWNLOAD_ADDRESS_BOOST=https://api.github.com/repos/coin3d/coin/releases/assets/%ASSET_ID%
+#          echo download file %DOWNLOAD_FILE_BOOST% from address %DOWNLOAD_ADDRESS_BOOST%
+#          curl -s -S -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" -o %DOWNLOAD_FILE_BOOST% %DOWNLOAD_ADDRESS_BOOST%
+#          7z x %DOWNLOAD_FILE_BOOST% -ocmake_download_dir
+#          cmake -S . -B cmake_build_dir -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=cmake_install_dir -DCMAKE_PREFIX_PATH=cmake_download_dir/boost_1_78_0 -DBoost_DIR=cmake_download_dir/boost_1_78_0/lib64-msvc-14.3/cmake/Boost-1.78.0
+#      - name: Build project
+#        run: cmake --build cmake_build_dir --target INSTALL --config Release -- /nologo /verbosity:minimal /maxcpucount:2 /property:MultiProcessorCompilation=true
+#      - name: Run tests
+#        run:  ctest -C Release -VV
+#        working-directory: cmake_build_dir
+#      - name: Create Artifacts
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: Windows-Artifacts
+#          path: cmake_install_dir/
+#        if: always()
+#
+#  macos-build:
+#    name: MacOS Build
+#    runs-on: macos-14
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#      - name: Create build directory and run CMake
+#        run: |
+#          brew install boost
+#          cmake -S . -B cmake_build_dir -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=cmake_install_dir -DCMAKE_CXX_STANDARD=11
+#      - name: Build project
+#        run: cmake --build cmake_build_dir --target install --config Release -- -j4
+#      - name: Run tests
+#        run:  ctest -C Release -VV
+#        working-directory: cmake_build_dir
+#      - name: Create Artifacts
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: MacOS-Artifacts
+#          path: cmake_install_dir/
+#        if: always()
+        

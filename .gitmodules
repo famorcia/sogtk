@@ -4,3 +4,6 @@
 [submodule "src/Inventor/Gtk/common"]
 	path = src/Inventor/Gtk/common
 	url = https://github.com/famorcia/sogui.git
+[submodule "cpack.d"]
+	path = cpack.d
+	url = https://github.com/coin3d/cpack.d
